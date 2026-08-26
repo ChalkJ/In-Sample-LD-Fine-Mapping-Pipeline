@@ -5,15 +5,18 @@ FINEMAP_ROOT="${FINEMAP_ROOT:?FINEMAP_ROOT must be set -- e.g. export FINEMAP_RO
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# --dataset-config=<path> is pulled out of the args wherever it appears;
-# the remaining positional args are PHENO and (optionally) REF_COHORT, e.g.:
-#   03_make_chunk_lookup.sh sczvscon
-#   03_make_chunk_lookup.sh sczvscon grp10neu3 --dataset-config=datasets/my_other_dataset.sh
+# --dataset-config=<path> and --sumstats-prefix=<prefix> are pulled out of
+# the args wherever they appear; the remaining positional args are PHENO
+# and (optionally) REF_COHORT, e.g.:
+#   03_make_chunk_lookup.sh my_pheno --sumstats-prefix=my_pheno_gwas
+#   03_make_chunk_lookup.sh my_pheno grp10neu3 --sumstats-prefix=my_pheno_gwas --dataset-config=datasets/my_other_dataset.sh
 DATASET_CONFIG=""
+SUMSTATS_PREFIX=""
 POSITIONAL=()
 for arg in "$@"; do
   case "$arg" in
-    --dataset-config=*) DATASET_CONFIG="${arg#--dataset-config=}" ;;
+    --dataset-config=*)  DATASET_CONFIG="${arg#--dataset-config=}" ;;
+    --sumstats-prefix=*) SUMSTATS_PREFIX="${arg#--sumstats-prefix=}" ;;
     *) POSITIONAL+=("$arg") ;;
   esac
 done
@@ -21,17 +24,12 @@ set -- "${POSITIONAL[@]}"
 DATASET_CONFIG="${DATASET_CONFIG:-$SCRIPT_DIR/datasets/ricopili_cross_bcs.sh}"
 source "$DATASET_CONFIG"
 
-PHENO=${1:?"usage: 03_make_chunk_lookup.sh <sczvscon|bipvscon> [ref_cohort] [--dataset-config=<path>]"}
+PHENO=${1:?"usage: 03_make_chunk_lookup.sh <phenotype> [ref_cohort] --sumstats-prefix=<prefix> [--dataset-config=<path>]"}
 REF_COHORT=${2:-grp10neu3}
-
-case "$PHENO" in
-  sczvscon) PREFIX=sc_vs_allcontrols ;;
-  bipvscon) PREFIX=bp_vs_allcontrols ;;
-  *) echo "unknown PHENO: $PHENO" >&2; exit 1 ;;
-esac
+SUMSTATS_PREFIX="${SUMSTATS_PREFIX:?--sumstats-prefix=<prefix> is required -- the per-chromosome sumstats filename prefix}"
 
 BASE=$FINEMAP_ROOT/$PHENO
-LOCI_REPORT=$BASE/clump/${PREFIX}_loci_report.txt
+LOCI_REPORT=$BASE/clump/${SUMSTATS_PREFIX}_loci_report.txt
 CHUNK_OUT=$BASE/chunk_lookup.txt
 LOCI_OUT=$BASE/loci_input.txt
 

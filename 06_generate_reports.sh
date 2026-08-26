@@ -17,7 +17,7 @@
 # before they run something; this stage only ever reads what's already
 # there).
 #
-# Usage: sbatch 06_generate_reports.sh <sczvscon|bipvscon>
+# Usage: sbatch 06_generate_reports.sh <phenotype>
 # =============================================================================
 
 module load 2025
@@ -27,11 +27,6 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-PHENO=${1:?"usage: sbatch 06_generate_reports.sh <sczvscon|bipvscon>"}
-
-case "$PHENO" in
-  sczvscon|bipvscon) ;;
-  *) echo "unknown PHENO: $PHENO" >&2; exit 1 ;;
-esac
+PHENO=${1:?"usage: sbatch 06_generate_reports.sh <phenotype>"}
 
 Rscript --vanilla "$SCRIPT_DIR/generate_reports.R" "$PHENO"

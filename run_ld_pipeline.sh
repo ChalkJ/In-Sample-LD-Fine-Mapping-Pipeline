@@ -12,21 +12,17 @@
 # prior pipeline scripts for why). Override --job-name/--output/--error/
 # --array at submission time, e.g.:
 #
-#   sbatch --job-name=sczvscon-ld \
-#     --output=$FINEMAP_ROOT/sczvscon/output/LD_dosage_%A_%a.out \
-#     --error=$FINEMAP_ROOT/sczvscon/output/LD_dosage_%A_%a.err \
+#   sbatch --job-name=my_pheno-ld \
+#     --output=$FINEMAP_ROOT/my_pheno/output/LD_dosage_%A_%a.out \
+#     --error=$FINEMAP_ROOT/my_pheno/output/LD_dosage_%A_%a.err \
 #     --array=1-273%8 \
-#     run_ld_pipeline.sh sczvscon
+#     run_ld_pipeline.sh my_pheno
 #
-#   sbatch --job-name=bipvscon-ld \
-#     --output=$FINEMAP_ROOT/bipvscon/output/LD_dosage_%A_%a.out \
-#     --error=$FINEMAP_ROOT/bipvscon/output/LD_dosage_%A_%a.err \
-#     --array=1-60%8 \
-#     run_ld_pipeline.sh bipvscon
-#
-# (273 = number of loci in sczvscon's loci_input.txt, 60 = bipvscon's --
+# (273 = number of loci in my_pheno's loci_input.txt, i.e.
 #  `wc -l < loci_input.txt` after running 03_make_chunk_lookup.sh, since the
-#  array bound can't be computed dynamically inside the script itself.)
+#  array bound can't be computed dynamically inside the script itself --
+#  04_finalize_loci_and_launch_ld.sh computes and passes this automatically
+#  when it self-submits this script.)
 
 module load 2025
 module load R/4.5.1-gfbf-2025a
@@ -57,17 +53,14 @@ case "$DATASET_CONFIG" in
   *) DATASET_CONFIG="$SCRIPT_DIR/$DATASET_CONFIG" ;;
 esac
 
-PHENO=${1:?"usage: sbatch run_ld_pipeline.sh <sczvscon|bipvscon> [--dataset-config=<path>]"}
-
-case "$PHENO" in
-  sczvscon) PREFIX=sc_vs_allcontrols; SUMSTATS_NAME=daner_scz_vs_allcontrols_1025_noduppos_hetpva.gz ;;
-  bipvscon) PREFIX=bp_vs_allcontrols; SUMSTATS_NAME=daner_bip_vs_allcontrols_1025_noduppos_hetpva.gz ;;
-  *) echo "unknown PHENO: $PHENO" >&2; exit 1 ;;
-esac
+PHENO=${1:?"usage: sbatch run_ld_pipeline.sh <phenotype> [--dataset-config=<path>]"}
 
 # --- Paths ---
+# Combined sumstats filename is a fixed convention -- see qc_filter_sumstats.R
+# and pipeline_paths.R, which both write/read this same name; not phenotype-
+# specific beyond substituting PHENO itself.
 DATADIR="$FINEMAP_ROOT/$PHENO"
-SUMSTATS="$DATADIR/$SUMSTATS_NAME"
+SUMSTATS="$DATADIR/daner_${PHENO}_qc.gz"
 PLINK2="$FINEMAP_ROOT/plink/plink2/plink2"
 PLINK1="$FINEMAP_ROOT/plink/plink1.9/plink"
 OUTDIR="$DATADIR/output/ld"

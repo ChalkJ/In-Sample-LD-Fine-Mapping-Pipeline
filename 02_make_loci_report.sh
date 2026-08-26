@@ -3,21 +3,26 @@ set -euo pipefail
 
 FINEMAP_ROOT="${FINEMAP_ROOT:?FINEMAP_ROOT must be set -- e.g. export FINEMAP_ROOT=/gpfs/home3/<you>/finemapping}"
 
-PHENO=${1:?"usage: 02_make_loci_report.sh <sczvscon|bipvscon>"}
+SUMSTATS_PREFIX=""
+POSITIONAL=()
+for arg in "$@"; do
+  case "$arg" in
+    --sumstats-prefix=*) SUMSTATS_PREFIX="${arg#--sumstats-prefix=}" ;;
+    *) POSITIONAL+=("$arg") ;;
+  esac
+done
+set -- "${POSITIONAL[@]}"
 
-case "$PHENO" in
-  sczvscon) PREFIX=sc_vs_allcontrols ;;
-  bipvscon) PREFIX=bp_vs_allcontrols ;;
-  *) echo "unknown PHENO: $PHENO" >&2; exit 1 ;;
-esac
+PHENO=${1:?"usage: 02_make_loci_report.sh <phenotype> --sumstats-prefix=<prefix>"}
+SUMSTATS_PREFIX="${SUMSTATS_PREFIX:?--sumstats-prefix=<prefix> is required -- the per-chromosome sumstats filename prefix}"
 
 BASE=$FINEMAP_ROOT/$PHENO
-REPORT=$BASE/clump/${PREFIX}_loci_report.txt
+REPORT=$BASE/clump/${SUMSTATS_PREFIX}_loci_report.txt
 
 echo -e "CHR\tSNP\tP\tSTART\tSTOP" > "$REPORT"
 
 for CHR in $(seq 1 22); do
-  SUMSTATS=$BASE/${PREFIX}_chr${CHR}.txt
+  SUMSTATS=$BASE/${SUMSTATS_PREFIX}_chr${CHR}.txt
   CLUMP=$BASE/clump/chr${CHR}.clumps
 
   if [ ! -f "$CLUMP" ]; then

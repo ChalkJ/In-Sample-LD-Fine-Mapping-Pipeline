@@ -2,9 +2,9 @@
 # =============================================================================
 # Sumstats QC: optional duplicate-position + HetPVa filter, then combine 22
 # per-chromosome sumstats files into the single combined daner-format .gz
-# that run_ld_pipeline.sh hard-requires (SUMSTATS_NAME below must stay in
-# sync with that script's case statement -- confirmed from its actual code,
-# not assumed).
+# that run_ld_pipeline.sh and pipeline_paths.R expect (out_name below must
+# stay in sync with those -- it's the same fixed, phenotype-agnostic
+# convention in all three places).
 #
 # Both filters are OPTIONAL and tunable -- not everyone wants them, and the
 # threshold is a judgment call, not a fixed constant. Defaults match the
@@ -18,18 +18,18 @@
 #     a SNP can't fail a test that was never run.
 #
 # Usage:
-#   Rscript qc_filter_sumstats.R <sczvscon|bipvscon>
-#   Rscript qc_filter_sumstats.R <sczvscon|bipvscon> --dedup=off
-#   Rscript qc_filter_sumstats.R <sczvscon|bipvscon> --hetpva-cutoff=0.01
-#   Rscript qc_filter_sumstats.R <sczvscon|bipvscon> --dedup=off --hetpva-cutoff=off
+#   Rscript qc_filter_sumstats.R <phenotype> --sumstats-prefix=<prefix>
+#   Rscript qc_filter_sumstats.R <phenotype> --sumstats-prefix=<prefix> --dedup=off
+#   Rscript qc_filter_sumstats.R <phenotype> --sumstats-prefix=<prefix> --hetpva-cutoff=0.01
+#   Rscript qc_filter_sumstats.R <phenotype> --sumstats-prefix=<prefix> --dedup=off --hetpva-cutoff=off
 # =============================================================================
 
 suppressPackageStartupMessages(library(data.table))
 
 args  <- commandArgs(trailingOnly = TRUE)
 PHENO <- args[1]
-if (is.na(PHENO) || !(PHENO %in% c("sczvscon", "bipvscon"))) {
-  stop("usage: Rscript qc_filter_sumstats.R <sczvscon|bipvscon> [--dedup=on|off] [--hetpva-cutoff=<value>|off]")
+if (is.na(PHENO) || PHENO == "") {
+  stop("usage: Rscript qc_filter_sumstats.R <phenotype> --sumstats-prefix=<prefix> [--dedup=on|off] [--hetpva-cutoff=<value>|off]")
 }
 
 opt_args <- args[-1]
@@ -47,14 +47,20 @@ if (HETPVA_ON && is.na(HETPVA_CUTOFF)) {
   stop("--hetpva-cutoff must be a number or 'off', got: ", HETPVA_RAW)
 }
 
-# Per-chromosome file prefix and combined-output filename are DIFFERENT
-# strings on this project (confirmed in run_ld_pipeline.sh: PREFIX=
-# sc_vs_allcontrols but SUMSTATS_NAME uses "scz_vs_allcontrols") -- kept as
-# two explicit case statements rather than derived from one, to avoid
-# silently drifting from what run_ld_pipeline.sh actually expects.
-chr_prefix   <- switch(PHENO, sczvscon = "sc_vs_allcontrols",  bipvscon = "bp_vs_allcontrols")
-out_name     <- switch(PHENO, sczvscon = "daner_scz_vs_allcontrols_1025_noduppos_hetpva.gz",
-                               bipvscon = "daner_bip_vs_allcontrols_1025_noduppos_hetpva.gz")
+# Per-chromosome sumstats filename prefix is user-supplied (however your own
+# upstream GWAS pipeline named its per-chromosome files) -- not something
+# this pipeline can derive on its own.
+chr_prefix <- get_opt("sumstats-prefix", "")
+if (chr_prefix == "") {
+  stop("--sumstats-prefix=<prefix> is required -- the per-chromosome sumstats filename prefix")
+}
+
+# Combined-output filename is a fixed, phenotype-agnostic convention (this
+# is pipeline-internal -- qc_filter_sumstats.R generates this file itself,
+# unlike chr_prefix above which describes pre-existing user data) -- must
+# stay in sync with pipeline_paths.R and run_ld_pipeline.sh, which both
+# read this same name.
+out_name <- paste0("daner_", PHENO, "_qc.gz")
 
 FINEMAP_ROOT <- Sys.getenv("FINEMAP_ROOT")
 if (FINEMAP_ROOT == "") {

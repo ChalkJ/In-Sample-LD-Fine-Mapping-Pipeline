@@ -17,11 +17,10 @@ get_pipeline_paths <- function(pheno) {
     stop("FINEMAP_ROOT environment variable must be set -- e.g. export FINEMAP_ROOT=/gpfs/home3/<you>/finemapping")
   }
 
-  sumstats_name <- switch(pheno,
-    sczvscon = "daner_scz_vs_allcontrols_1025_noduppos_hetpva.gz",
-    bipvscon = "daner_bip_vs_allcontrols_1025_noduppos_hetpva.gz",
-    stop("unknown phenotype: ", pheno)
-  )
+  # Combined QC'd sumstats filename is a fixed, phenotype-agnostic
+  # convention -- qc_filter_sumstats.R writes this same name, so no
+  # per-phenotype mapping is needed (or kept in sync) here.
+  sumstats_name <- paste0("daner_", pheno, "_qc.gz")
 
   datadir <- file.path(finemap_root, pheno)
 

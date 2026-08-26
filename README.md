@@ -28,7 +28,7 @@ itself is phenotype- and dataset-agnostic — see "Configuration" and
 
 ```bash
 export FINEMAP_ROOT=/gpfs/home3/<you>/finemapping   # see "Configuration" below
-bash submit_full_pipeline.sh sczvscon
+bash submit_full_pipeline.sh my_pheno --sumstats-prefix=my_pheno_gwas
 ```
 
 That's the whole thing. It queues every stage below as SLURM jobs chained
@@ -39,26 +39,22 @@ watch `squeue` and submit each stage yourself. Monitor with:
 squeue -u $USER
 ```
 
+`<phenotype>` (`my_pheno` above) can be anything you like — it's just the
+subdirectory name under `$FINEMAP_ROOT`. `--sumstats-prefix` is required:
+it's whatever your own per-chromosome sumstats files are named (see
+"Prerequisites" below). There is no fixed list of accepted phenotype names —
+any identifier works, nothing in the pipeline needs editing to add a new one.
+
 Optional flags (all can be combined):
 
 ```bash
-bash submit_full_pipeline.sh sczvscon --dedup=off
-bash submit_full_pipeline.sh sczvscon --hetpva-cutoff=0.01
-bash submit_full_pipeline.sh sczvscon --hetpva-cutoff=off --dedup=off
-bash submit_full_pipeline.sh sczvscon --ref-cohort=grp10neu3
-bash submit_full_pipeline.sh sczvscon --dataset-config=datasets/my_other_dataset.sh
-bash submit_full_pipeline.sh sczvscon --finemap-config=finemap_config_susie_only.R
+bash submit_full_pipeline.sh my_pheno --sumstats-prefix=my_pheno_gwas --dedup=off
+bash submit_full_pipeline.sh my_pheno --sumstats-prefix=my_pheno_gwas --hetpva-cutoff=0.01
+bash submit_full_pipeline.sh my_pheno --sumstats-prefix=my_pheno_gwas --hetpva-cutoff=off --dedup=off
+bash submit_full_pipeline.sh my_pheno --sumstats-prefix=my_pheno_gwas --ref-cohort=grp10neu3
+bash submit_full_pipeline.sh my_pheno --sumstats-prefix=my_pheno_gwas --dataset-config=datasets/my_other_dataset.sh
+bash submit_full_pipeline.sh my_pheno --sumstats-prefix=my_pheno_gwas --finemap-config=finemap_config_susie_only.R
 ```
-
-Currently accepted phenotypes: `sczvscon` (SCZ vs all controls), `bipvscon`
-(BP vs all controls). Adding a third means adding one more `case` arm in
-each of `01_extract_merge_clump.sh`, `02_make_loci_report.sh`,
-`03_make_chunk_lookup.sh`, `run_ld_pipeline.sh` (the `PREFIX=`/
-`SUMSTATS_NAME=` mapping), and `pipeline_paths.R`'s `get_pipeline_paths()`
-(the `sumstats_name` mapping — must match `run_ld_pipeline.sh`'s exactly;
-shared by both `run_finemapping.R` and `generate_reports.R`, so only needs
-updating in one place), plus the corresponding data laid out per
-"Prerequisites" below.
 
 ## Configuration
 
@@ -89,10 +85,9 @@ Before running, for the phenotype you're processing (`$PHENO`), under
 `$FINEMAP_ROOT/$PHENO/`:
 
 - 22 per-chromosome sumstats files, one per autosome, named
-  `<prefix>_chr<N>.txt` where `<prefix>` is `sc_vs_allcontrols` for
-  `sczvscon` or `bp_vs_allcontrols` for `bipvscon` (see `case` statements at
-  the top of `01_extract_merge_clump.sh` / `02_make_loci_report.sh` /
-  `03_make_chunk_lookup.sh` — all three must agree on this mapping).
+  `<prefix>_chr<N>.txt` where `<prefix>` is whatever you pass as
+  `--sumstats-prefix=<prefix>` — entirely up to you, however your own
+  upstream GWAS pipeline happened to name its per-chromosome output.
 - `EUR_cohorts.txt` — one cohort name per line, e.g.:
   ```
   grp10neu3
@@ -149,15 +144,15 @@ Under `$FINEMAP_ROOT/$PHENO/`:
 
 ```
 qc_sumstats_report.txt                       # QC stage: what was dropped and why
-daner_<...>_1025_noduppos_hetpva.gz          # QC stage: combined, filtered sumstats
+daner_<phenotype>_qc.gz                      # QC stage: combined, filtered sumstats (fixed naming convention)
 snplists/<prefix>_chr<N>.snplist             # stage 00
 clump/chr<N>.clumps, chr<N>.log              # stage 01
 clump/<prefix>_loci_report.txt               # stage 02
 loci_input.txt                               # stage 03: locus_id  chr  start  stop  (unpadded, no header)
 chunk_lookup.txt                             # stage 03: locus_id(padded)  chunk1  chunk2-or-NA
-output/ld/<locus>.ld.gz                      # stage 05: merged LD matrix (gzipped)
-output/ld/<locus>.snp.log                    # stage 05: SNPs entering that locus's LD
-output/ld/<locus>.samples.log                # stage 05: sample info for N-effective weighting
+output/ld/<locus>.ld.gz                      # LD stage: merged LD matrix (gzipped)
+output/ld/<locus>.snp.log                    # LD stage: SNPs entering that locus's LD
+output/ld/<locus>.samples.log                # LD stage: sample info for N-effective weighting
 output/ld/locus_<locus>_<cohort>.ld.gz       # LD stage: per-cohort LD (kept for inspection)
 output/LD_dosage_<jobid>_<taskid>.{out,err}  # LD stage: SLURM array logs
 susie/<locus>.susie_l<L>.rds                 # stage 05: SuSiE fit object (L = max_causal_variants used)
@@ -182,6 +177,8 @@ Example real content (from an existing analysis, format reference only):
 1	1	173461333	175049333
 2	8	143902410	144039410
 ```
+
+**Note on the combined-sumstats filename**: `daner_<phenotype>_qc.gz` is a fixed convention the QC stage generates itself — not something you configure. If you're upgrading from an earlier version of this pipeline (or already had a combined sumstats file built by hand under a different name), the QC stage won't find it under the new name and will simply regenerate it from your per-chromosome files — a one-time, harmless rebuild, not data loss.
 
 ## Dataset config (portability to a different individual-level dataset)
 

@@ -8,7 +8,7 @@
 # combined sumstats this pipeline's own qc_filter_sumstats.R stage produces,
 # rather than re-reading the 22 raw per-chromosome files.
 #
-# Usage: Rscript run_finemapping.R <sczvscon|bipvscon> [--finemap-config=<path>]
+# Usage: Rscript run_finemapping.R <phenotype> [--finemap-config=<path>]
 #   Defaults --finemap-config to "finemap_config.R" alongside this script if
 #   omitted -- 05_run_finemapping.sh always passes an explicit resolved
 #   path, so this default only matters for a manual/standalone invocation.
@@ -40,8 +40,8 @@ for (a in args) {
 }
 
 PHENO <- POSITIONAL[1]
-if (is.na(PHENO) || !(PHENO %in% c("sczvscon", "bipvscon"))) {
-  stop("usage: Rscript run_finemapping.R <sczvscon|bipvscon> [--finemap-config=<path>]")
+if (is.na(PHENO) || PHENO == "") {
+  stop("usage: Rscript run_finemapping.R <phenotype> [--finemap-config=<path>]")
 }
 
 if (CONFIG_PATH == "") CONFIG_PATH <- file.path(SCRIPT_DIR, "finemap_config.R")

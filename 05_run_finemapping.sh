@@ -18,11 +18,11 @@
 # that hit run_ld_pipeline.sh's 8hr array limit. Override at submission
 # time same as the other stages, e.g.:
 #
-#   sbatch --job-name=sczvscon-finemap \
-#     --output=$FINEMAP_ROOT/sczvscon/logs/finemap_%A.out \
-#     --error=$FINEMAP_ROOT/sczvscon/logs/finemap_%A.err \
+#   sbatch --job-name=my_pheno-finemap \
+#     --output=$FINEMAP_ROOT/my_pheno/logs/finemap_%A.out \
+#     --error=$FINEMAP_ROOT/my_pheno/logs/finemap_%A.err \
 #     --time=48:00:00 \
-#     05_run_finemapping.sh sczvscon
+#     05_run_finemapping.sh my_pheno
 #
 # Add --finemap-config=<path> to use a config other than the default
 # finemap_config.R alongside this script (method toggle, max_causal_variants,
@@ -52,12 +52,7 @@ done
 set -- "${POSITIONAL[@]}"
 FINEMAP_CONFIG="${FINEMAP_CONFIG:-$SCRIPT_DIR/finemap_config.R}"
 
-PHENO=${1:?"usage: sbatch 05_run_finemapping.sh <sczvscon|bipvscon> [--finemap-config=<path>]"}
-
-case "$PHENO" in
-  sczvscon|bipvscon) ;;
-  *) echo "unknown PHENO: $PHENO" >&2; exit 1 ;;
-esac
+PHENO=${1:?"usage: sbatch 05_run_finemapping.sh <phenotype> [--finemap-config=<path>]"}
 
 Rscript --vanilla "$SCRIPT_DIR/run_finemapping.R" "$PHENO" "--finemap-config=${FINEMAP_CONFIG}"
 

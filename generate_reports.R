@@ -11,7 +11,7 @@
 # rather than a stale assumption. No --finemap-config flag needed as a
 # result.
 #
-# Usage: Rscript generate_reports.R <sczvscon|bipvscon>
+# Usage: Rscript generate_reports.R <phenotype>
 # =============================================================================
 
 suppressPackageStartupMessages({
@@ -30,8 +30,8 @@ source(file.path(SCRIPT_DIR, "pipeline_paths.R"))
 
 args  <- commandArgs(trailingOnly = TRUE)
 PHENO <- args[1]
-if (is.na(PHENO) || !(PHENO %in% c("sczvscon", "bipvscon"))) {
-  stop("usage: Rscript generate_reports.R <sczvscon|bipvscon>")
+if (is.na(PHENO) || PHENO == "") {
+  stop("usage: Rscript generate_reports.R <phenotype>")
 }
 
 P <- get_pipeline_paths(PHENO)
