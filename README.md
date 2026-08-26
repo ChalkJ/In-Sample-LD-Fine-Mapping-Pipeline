@@ -345,12 +345,11 @@ if no FINEMAP binary is available.
 
 ## Citation
 
-If you use this pipeline, please cite it — see [`CITATION.cff`](CITATION.cff)
-for the machine-readable citation metadata (also surfaced by GitHub's "Cite
-this repository" button). If this repository has been archived on Zenodo,
+If you use this pipeline, please cite it :) see [`CITATION.cff`](CITATION.cff)
+for the machine-readable citation metadata. If this repository has been archived on Zenodo,
 prefer citing the archived version's DOI:
 
-[![DOI](https://zenodo.org/badge/DOI/PLACEHOLDER.svg)](https://doi.org/PLACEHOLDER)
+[![DOI](https://zenodo.org/badge/1347179228.svg)](https://doi.org/10.5281/zenodo.22112840)
 
 ## License
 
