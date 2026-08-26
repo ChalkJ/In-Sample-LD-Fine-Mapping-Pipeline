@@ -2,6 +2,9 @@
 
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 
+*A self-contained pipeline, performing multi-method fine-mapping and
+generating in-sample LD matrices from individual-level data.*
+
 A self-contained SLURM/HPC pipeline: takes per-chromosome GWAS summary
 statistics for a case-vs-control comparison through sumstats QC, clumping,
 locus definition, in-sample linkage-disequilibrium (LD) generation, and
