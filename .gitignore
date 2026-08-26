@@ -1,0 +1,19 @@
+# R
+.Rhistory
+.RData
+.Rproj.user/
+*.Rproj
+
+# SLURM job logs (paths are user-specific and these are runtime output,
+# never source)
+logs/
+*.out
+*.err
+
+# OS junk
+.DS_Store
+Thumbs.db
+
+# Editor/IDE
+.vscode/
+.idea/

@@ -1,0 +1,26 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+title: "In-Sample LD & Fine-Mapping Pipeline"
+type: software
+version: 1.0.0
+date-released: "2026-08-26"
+authors:
+  - family-names: "Chalk"
+    given-names: "James"
+repository-code: "https://github.com/ChalkJ/In-Sample-LD-Fine-Mapping-Pipeline"
+license: Apache-2.0
+keywords:
+  - fine-mapping
+  - GWAS
+  - SuSiE
+  - FINEMAP
+  - linkage disequilibrium
+  - HPC
+  - SLURM
+  - genomics
+abstract: >
+  A self-contained SLURM/HPC pipeline that takes GWAS summary statistics
+  from sumstats quality control through clumping, locus definition,
+  in-sample linkage-disequilibrium (LD) generation, and config-driven
+  fine-mapping (SuSiE / FINEMAP / both / none), producing per-SNP results
+  tables, genome-wide summary statistics, and locus-zoom plots.
