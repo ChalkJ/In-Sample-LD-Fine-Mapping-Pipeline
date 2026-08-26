@@ -6,23 +6,21 @@
 generating in-sample LD matrices from individual-level data.*
 
 A self-contained SLURM/HPC pipeline: takes per-chromosome GWAS summary
-statistics for a case-vs-control comparison through sumstats QC, clumping,
-locus definition, in-sample linkage-disequilibrium (LD) generation, and
-config-driven fine-mapping (SuSiE/FINEMAP/both/none — all native to the
-cluster, no local machine or WSL involved), finishing with a results/
-reporting stage (per-SNP table, summary statistics, locus-zoom plots).
-One command, chained via SLURM job dependencies — see "Quick start" below.
-Everything needed to run this is in this one repository.
+statistics through sumstats QC, clumping, locus definition, in-sample 
+linkage-disequilibrium (LD) generation, and config-driven fine-mapping 
+(SuSiE/FINEMAP/both/none — all native to the cluster, no local machine or
+WSL involved), finishing with a results / reporting stage (per-SNP table,
+summary statistics, locus-zoom plots). See "Quick start" below.
 
-VEP/gene annotation is **not** part of this pipeline — it's a manual,
-inherently local hand-off (submitting to the VEP web tool) that stays a
-separate, later phase. The locus-zoom plots this pipeline does produce are
-plain PIP-colored SNP scatters with no gene track.
+VEP/gene annotation is **not** part of this pipeline due to mirror instability,
+it's a manual seperate task (submitting to the VEP web tool) done at a later phase.
+The locus-zoom plots this pipeline does produce are plain PIP-colored SNP scatters 
+with no gene track. The gene track can be added once positional values have been acquired
+through a VEP call.
 
-Originally built for the PGC4 schizophrenia/bipolar-disorder fine-mapping
-project (SCZ-vs-controls, BP-vs-controls comparisons), but the pipeline
-itself is phenotype- and dataset-agnostic — see "Configuration" and
-"Dataset config" below.
+Originally built for the PGC SCZvsBP case-case GWAS fine-mapping
+project, but the pipeline itself is phenotype- and dataset-agnostic.
+See "Configuration" and "Dataset config" below.
 
 ## Quick start
 
@@ -32,14 +30,14 @@ bash submit_full_pipeline.sh my_pheno --sumstats-prefix=my_pheno_gwas
 ```
 
 That's the whole thing. It queues every stage below as SLURM jobs chained
-with `--dependency=afterok`, so they run in order automatically — no need to
-watch `squeue` and submit each stage yourself. Monitor with:
+with `--dependency=afterok`, so they run in order automatically.
+Monitor with:
 
 ```bash
 squeue -u $USER
 ```
 
-`<phenotype>` (`my_pheno` above) can be anything you like — it's just the
+`<phenotype>` (`my_pheno` above) can be anything you like, it's just the
 subdirectory name under `$FINEMAP_ROOT`. `--sumstats-prefix` is required:
 it's whatever your own per-chromosome sumstats files are named (see
 "Prerequisites" below). There is no fixed list of accepted phenotype names —
@@ -58,22 +56,21 @@ bash submit_full_pipeline.sh my_pheno --sumstats-prefix=my_pheno_gwas --finemap-
 
 ## Configuration
 
-**`FINEMAP_ROOT`** (required environment variable) — the working-directory
+**`FINEMAP_ROOT`** (required environment variable) the working-directory
 root every stage reads and writes under (per-phenotype subdirectories,
 sumstats, LD output, fine-mapping output, results). Every script checks
-this is set and fails immediately with a clear message if it isn't, rather
-than silently falling back to any particular default:
+this is set and fails immediately with a (hopefully) clear message if it isn't:
 
 ```bash
 export FINEMAP_ROOT=/path/to/your/finemapping
 ```
 
-Set it once in your shell before running `submit_full_pipeline.sh` (or in
+Set once in your shell before running `submit_full_pipeline.sh` (or in
 your shell profile) — `sbatch` inherits the submitting shell's environment
-by default, so this one export propagates automatically through the whole
+by default, this export propagates automatically through the whole
 self-chaining job tree the pipeline submits. It also determines where the
-plink2/plink1.9 binaries are expected (`$FINEMAP_ROOT/plink/plink2/plink2`,
-`$FINEMAP_ROOT/plink/plink1.9/plink`).
+plink2/plink1.9 binaries are expected, this assumes pre-placed binaries, not a HPC module
+(`$FINEMAP_ROOT/plink/plink2/plink2`, `$FINEMAP_ROOT/plink/plink1.9/plink`).
 
 Two more, separate config layers, covered in their own sections below:
 **`--dataset-config=<path>`** (which individual-level genotype dataset to
@@ -86,7 +83,7 @@ Before running, for the phenotype you're processing (`$PHENO`), under
 
 - 22 per-chromosome sumstats files, one per autosome, named
   `<prefix>_chr<N>.txt` where `<prefix>` is whatever you pass as
-  `--sumstats-prefix=<prefix>` — entirely up to you, however your own
+  `--sumstats-prefix=<prefix>` entirely up to you, however your own
   upstream GWAS pipeline happened to name its per-chromosome output.
 - `EUR_cohorts.txt` — one cohort name per line, e.g.:
   ```
@@ -107,9 +104,7 @@ dataset-config-driven, since these are software installs, not data):
 
 ## Input format
 
-Each per-chromosome sumstats file is tab-separated with this exact header
-(confirmed from real data, column order matters — several scripts read by
-position, not by name):
+Each per-chromosome sumstats file is expected to be in DANER format ie:
 
 ```
 CHR  SNP  BP  A1  A2  FRQ_A_x  FRQ_U_x  INFO  OR  SE  P  ngt  Direction  HetISqt  HetDf  HetPVa  Nca  Nco  Neff_half
@@ -161,7 +156,7 @@ finemap/master, finemap/master_rerun_k<N>    # stage 05: FINEMAP multi-locus --i
 finemapping_<phenotype>_summary.tsv          # stage 05: per-locus SuSiE/FINEMAP diagnostics summary
 results/all_snps_<phenotype>.tsv             # stage 06: one row per SNP -- sumstats + PIPs + locus + CS
 results/summary_stats_<phenotype>.tsv        # stage 06: genome-wide rollup (mean CS size, mean PIP, ...)
-results/plots/<locus>_susie_scatter.png      # stage 06: PIP-colored SNP scatter (SuSiE), no gene track
+results/plots/<locus>_susie_scatter.png      # stage 06: PIP-colored SNP scatter (SuSiE)
 results/plots/<locus>_finemap_scatter.png    # stage 06: same, FINEMAP
 results/plots/<locus>_ld_heatmap.png         # stage 06: LD r heatmap
 ```
@@ -177,8 +172,6 @@ Example real content (from an existing analysis, format reference only):
 1	1	173461333	175049333
 2	8	143902410	144039410
 ```
-
-**Note on the combined-sumstats filename**: `daner_<phenotype>_qc.gz` is a fixed convention the QC stage generates itself — not something you configure. If you're upgrading from an earlier version of this pipeline (or already had a combined sumstats file built by hand under a different name), the QC stage won't find it under the new name and will simply regenerate it from your per-chromosome files — a one-time, harmless rebuild, not data loss.
 
 ## Dataset config (portability to a different individual-level dataset)
 
@@ -339,7 +332,7 @@ scatter plots; the LD heatmap only needs base R.
 
 ## Status
 
-Written and locally verified — every shell script bash-syntax-checks, every
+Written and locally verified every shell script bash-syntax-checks, every
 R script parse-checks, and the algorithmically trickiest pieces (sumstats
 QC filter logic, dataset-config plumbing, fine-mapping's method-toggle and
 fail-fast paths, the highest-L SuSiE and best-posterior FINEMAP `.credK`
@@ -352,15 +345,11 @@ if no FINEMAP binary is available.
 
 ## Citation
 
-If you use this pipeline, please cite it — see [`CITATION.cff`](CITATION.cff)
-for the machine-readable citation metadata (also surfaced by GitHub's "Cite
-this repository" button). If this repository has been archived on Zenodo,
+If you use this pipeline, please cite it :) see [`CITATION.cff`](CITATION.cff)
+for the machine-readable citation metadata. If this repository has been archived on Zenodo,
 prefer citing the archived version's DOI:
 
-[![DOI](https://zenodo.org/badge/DOI/PLACEHOLDER.svg)](https://doi.org/PLACEHOLDER)
-
-*(DOI badge above is a placeholder — replace both `PLACEHOLDER`s with the
-real DOI once this repository has been archived on Zenodo.)*
+[![DOI](https://zenodo.org/badge/1347179228.svg)](https://doi.org/10.5281/zenodo.22112840)
 
 ## License
 
