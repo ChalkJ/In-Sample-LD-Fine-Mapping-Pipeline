@@ -8,7 +8,7 @@
 #SBATCH --array=1-22%8
 
 # Requires FINEMAP_ROOT to be set in the environment (e.g.
-# `export FINEMAP_ROOT=/gpfs/home3/<you>/finemapping`) -- sbatch inherits
+# `export FINEMAP_ROOT=/path/to/your/finemapping`) -- sbatch inherits
 # the submitting shell's environment by default, so exporting it once
 # before submitting is enough; see README.md "Configuration".
 #
@@ -29,7 +29,7 @@
 
 set -euo pipefail
 
-FINEMAP_ROOT="${FINEMAP_ROOT:?FINEMAP_ROOT must be set -- e.g. export FINEMAP_ROOT=/gpfs/home3/<you>/finemapping}"
+FINEMAP_ROOT="${FINEMAP_ROOT:?FINEMAP_ROOT must be set -- e.g. export FINEMAP_ROOT=/path/to/your/finemapping}"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 

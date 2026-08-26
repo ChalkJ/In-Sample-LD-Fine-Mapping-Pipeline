@@ -64,7 +64,7 @@ out_name <- paste0("daner_", PHENO, "_qc.gz")
 
 FINEMAP_ROOT <- Sys.getenv("FINEMAP_ROOT")
 if (FINEMAP_ROOT == "") {
-  stop("FINEMAP_ROOT environment variable must be set -- e.g. export FINEMAP_ROOT=/gpfs/home3/<you>/finemapping")
+  stop("FINEMAP_ROOT environment variable must be set -- e.g. export FINEMAP_ROOT=/path/to/your/finemapping")
 }
 
 BASE    <- file.path(FINEMAP_ROOT, PHENO)

@@ -27,7 +27,7 @@ itself is phenotype- and dataset-agnostic — see "Configuration" and
 ## Quick start
 
 ```bash
-export FINEMAP_ROOT=/gpfs/home3/<you>/finemapping   # see "Configuration" below
+export FINEMAP_ROOT=/path/to/your/finemapping   # see "Configuration" below
 bash submit_full_pipeline.sh my_pheno --sumstats-prefix=my_pheno_gwas
 ```
 
@@ -65,7 +65,7 @@ this is set and fails immediately with a clear message if it isn't, rather
 than silently falling back to any particular default:
 
 ```bash
-export FINEMAP_ROOT=/gpfs/home3/<you>/finemapping
+export FINEMAP_ROOT=/path/to/your/finemapping
 ```
 
 Set it once in your shell before running `submit_full_pipeline.sh` (or in

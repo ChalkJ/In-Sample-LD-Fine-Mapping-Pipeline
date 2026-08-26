@@ -7,14 +7,14 @@
 # copy-pasted scripts).
 #
 # Requires the FINEMAP_ROOT environment variable (e.g.
-# `export FINEMAP_ROOT=/gpfs/home3/<you>/finemapping`) -- see README.md
+# `export FINEMAP_ROOT=/path/to/your/finemapping`) -- see README.md
 # "Configuration".
 # =============================================================================
 
 get_pipeline_paths <- function(pheno) {
   finemap_root <- Sys.getenv("FINEMAP_ROOT")
   if (finemap_root == "") {
-    stop("FINEMAP_ROOT environment variable must be set -- e.g. export FINEMAP_ROOT=/gpfs/home3/<you>/finemapping")
+    stop("FINEMAP_ROOT environment variable must be set -- e.g. export FINEMAP_ROOT=/path/to/your/finemapping")
   }
 
   # Combined QC'd sumstats filename is a fixed, phenotype-agnostic

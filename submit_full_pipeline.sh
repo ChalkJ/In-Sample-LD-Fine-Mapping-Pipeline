@@ -22,7 +22,7 @@
 #        finemap_config.R. Always queued; no-ops immediately if method="none"
 #
 # Requires FINEMAP_ROOT to be set in the environment, e.g.:
-#   export FINEMAP_ROOT=/gpfs/home3/<you>/finemapping
+#   export FINEMAP_ROOT=/path/to/your/finemapping
 # sbatch inherits the submitting shell's environment by default, so setting
 # it once before running this script propagates automatically through the
 # whole self-chaining job tree this submits. See README.md "Configuration".
@@ -46,7 +46,7 @@
 # =============================================================================
 set -euo pipefail
 
-FINEMAP_ROOT="${FINEMAP_ROOT:?FINEMAP_ROOT must be set -- e.g. export FINEMAP_ROOT=/gpfs/home3/<you>/finemapping}"
+FINEMAP_ROOT="${FINEMAP_ROOT:?FINEMAP_ROOT must be set -- e.g. export FINEMAP_ROOT=/path/to/your/finemapping}"
 
 DATASET_CONFIG=""
 FINEMAP_CONFIG=""

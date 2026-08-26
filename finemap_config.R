@@ -40,7 +40,7 @@ CONFIG <- list(
     # REQUIRED (non-blank, executable) if method is "finemap" or "both".
     # Snellius has no FINEMAP module -- place the binary somewhere in your
     # own scratch/home space first and set the full path here, e.g.:
-    #   binary = "/gpfs/home3/<you>/finemapping/bin/finemap"
+    #   binary = "/path/to/your/finemapping/bin/finemap"
     # run_finemapping.R checks this up front and fails loudly before doing
     # any SuSiE work if it's needed but missing/not executable.
     binary = ""

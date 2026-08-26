@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 
-FINEMAP_ROOT="${FINEMAP_ROOT:?FINEMAP_ROOT must be set -- e.g. export FINEMAP_ROOT=/gpfs/home3/<you>/finemapping}"
+FINEMAP_ROOT="${FINEMAP_ROOT:?FINEMAP_ROOT must be set -- e.g. export FINEMAP_ROOT=/path/to/your/finemapping}"
 
 SUMSTATS_PREFIX=""
 POSITIONAL=()

@@ -17,7 +17,7 @@ set -euo pipefail
 #   <prefix> is whatever your per-chromosome sumstats files are named:
 #   expects "$FINEMAP_ROOT/<phenotype>/<prefix>_chr<N>.txt" for N = 1..22.
 
-FINEMAP_ROOT="${FINEMAP_ROOT:?FINEMAP_ROOT must be set -- e.g. export FINEMAP_ROOT=/gpfs/home3/<you>/finemapping}"
+FINEMAP_ROOT="${FINEMAP_ROOT:?FINEMAP_ROOT must be set -- e.g. export FINEMAP_ROOT=/path/to/your/finemapping}"
 
 SUMSTATS_PREFIX=""
 POSITIONAL=()
