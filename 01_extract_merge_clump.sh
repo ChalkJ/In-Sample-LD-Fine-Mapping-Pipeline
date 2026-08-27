@@ -19,13 +19,13 @@
 #   sbatch --job-name=my_pheno-clump \
 #     --output=$FINEMAP_ROOT/my_pheno/logs/clump_%A_%a.out \
 #     --error=$FINEMAP_ROOT/my_pheno/logs/clump_%A_%a.err \
-#     01_extract_merge_clump.sh my_pheno --sumstats-prefix=my_pheno_gwas
+#     01_extract_merge_clump.sh my_pheno --sumstats-file=my_pheno_gwas.txt
 #
 # Add --dataset-config=<path> to point at a different individual-level
 # dataset's config (see datasets/ricopili_cross_bcs.sh for the required
 # interface); defaults to that file if omitted, e.g.:
 #
-#     01_extract_merge_clump.sh my_pheno --sumstats-prefix=my_pheno_gwas --dataset-config=datasets/my_other_dataset.sh
+#     01_extract_merge_clump.sh my_pheno --sumstats-file=my_pheno_gwas.txt --dataset-config=datasets/my_other_dataset.sh
 
 set -euo pipefail
 
@@ -36,12 +36,12 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CHR=$SLURM_ARRAY_TASK_ID
 
 DATASET_CONFIG=""
-SUMSTATS_PREFIX=""
+SUMSTATS_FILE=""
 POSITIONAL=()
 for arg in "$@"; do
   case "$arg" in
-    --dataset-config=*)   DATASET_CONFIG="${arg#--dataset-config=}" ;;
-    --sumstats-prefix=*)  SUMSTATS_PREFIX="${arg#--sumstats-prefix=}" ;;
+    --dataset-config=*) DATASET_CONFIG="${arg#--dataset-config=}" ;;
+    --sumstats-file=*)  SUMSTATS_FILE="${arg#--sumstats-file=}" ;;
     *) POSITIONAL+=("$arg") ;;
   esac
 done
@@ -49,16 +49,19 @@ set -- "${POSITIONAL[@]}"
 DATASET_CONFIG="${DATASET_CONFIG:-$SCRIPT_DIR/datasets/ricopili_cross_bcs.sh}"
 source "$DATASET_CONFIG"
 
-PHENO=${1:?"usage: sbatch 01_extract_merge_clump.sh <phenotype> --sumstats-prefix=<prefix> [--dataset-config=<path>]"}
-SUMSTATS_PREFIX="${SUMSTATS_PREFIX:?--sumstats-prefix=<prefix> is required -- the per-chromosome sumstats filename prefix}"
+PHENO=${1:?"usage: sbatch 01_extract_merge_clump.sh <phenotype> --sumstats-file=<filename> [--dataset-config=<path>]"}
+SUMSTATS_FILE="${SUMSTATS_FILE:?--sumstats-file=<filename> is required -- your whole-genome sumstats file}"
 
 BASE=$FINEMAP_ROOT/$PHENO
 COHORT_LIST=$BASE/EUR_cohorts.txt
 PLINK2=$FINEMAP_ROOT/plink/plink2/plink2
 PLINK19=$FINEMAP_ROOT/plink/plink1.9/plink
 
-SUMSTATS=$BASE/${SUMSTATS_PREFIX}_chr${CHR}.txt
-SNPLIST=$BASE/snplists/${SUMSTATS_PREFIX}_chr${CHR}.snplist
+# Whole-genome file/list, same for every array task -- --chr "$CHR" below
+# (already present) does the actual per-task chromosome restriction, so
+# neither of these needs to be chromosome-specific.
+SUMSTATS=$BASE/$SUMSTATS_FILE
+SNPLIST=$BASE/snplist.txt
 
 # All bulky intermediates (per-cohort bed, merged bed, merged pgen) live in
 # $TMPDIR (node-local scratch, wiped when the job ends). Only the small

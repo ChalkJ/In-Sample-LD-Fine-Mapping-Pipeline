@@ -17,7 +17,7 @@
 # gets queued; run_finemapping.R itself no-ops immediately if the fine-
 # mapping config's method="none", so there's no need to branch on that here.
 #
-# Usage: sbatch 04_finalize_loci_and_launch_ld.sh <phenotype> [ref_cohort] --sumstats-prefix=<prefix> [--dataset-config=<path>] [--finemap-config=<path>]
+# Usage: sbatch 04_finalize_loci_and_launch_ld.sh <phenotype> [ref_cohort] --sumstats-file=<filename> [--dataset-config=<path>] [--finemap-config=<path>]
 #   ref_cohort defaults to grp10neu3 (see 03_make_chunk_lookup.sh) -- only
 #   needs to be a cohort with a complete dosage-chunk directory for whatever
 #   dataset --dataset-config points at.
@@ -38,13 +38,13 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 DATASET_CONFIG=""
 FINEMAP_CONFIG=""
-SUMSTATS_PREFIX=""
+SUMSTATS_FILE=""
 POSITIONAL=()
 for arg in "$@"; do
   case "$arg" in
-    --dataset-config=*)  DATASET_CONFIG="${arg#--dataset-config=}" ;;
-    --finemap-config=*)  FINEMAP_CONFIG="${arg#--finemap-config=}" ;;
-    --sumstats-prefix=*) SUMSTATS_PREFIX="${arg#--sumstats-prefix=}" ;;
+    --dataset-config=*) DATASET_CONFIG="${arg#--dataset-config=}" ;;
+    --finemap-config=*) FINEMAP_CONFIG="${arg#--finemap-config=}" ;;
+    --sumstats-file=*)  SUMSTATS_FILE="${arg#--sumstats-file=}" ;;
     *) POSITIONAL+=("$arg") ;;
   esac
 done
@@ -52,15 +52,15 @@ set -- "${POSITIONAL[@]}"
 DATASET_CONFIG="${DATASET_CONFIG:-$SCRIPT_DIR/datasets/ricopili_cross_bcs.sh}"
 FINEMAP_CONFIG="${FINEMAP_CONFIG:-$SCRIPT_DIR/finemap_config.R}"
 
-PHENO=${1:?"usage: sbatch 04_finalize_loci_and_launch_ld.sh <phenotype> [ref_cohort] --sumstats-prefix=<prefix> [--dataset-config=<path>] [--finemap-config=<path>]"}
+PHENO=${1:?"usage: sbatch 04_finalize_loci_and_launch_ld.sh <phenotype> [ref_cohort] --sumstats-file=<filename> [--dataset-config=<path>] [--finemap-config=<path>]"}
 REF_COHORT=${2:-grp10neu3}
-SUMSTATS_PREFIX="${SUMSTATS_PREFIX:?--sumstats-prefix=<prefix> is required -- the per-chromosome sumstats filename prefix}"
+SUMSTATS_FILE="${SUMSTATS_FILE:?--sumstats-file=<filename> is required -- your whole-genome sumstats file}"
 
 BASE="$FINEMAP_ROOT/$PHENO"
 LOCI_FILE="$BASE/loci_input.txt"
 
-bash "$SCRIPT_DIR/02_make_loci_report.sh" "$PHENO" "--sumstats-prefix=${SUMSTATS_PREFIX}"
-bash "$SCRIPT_DIR/03_make_chunk_lookup.sh" "$PHENO" "$REF_COHORT" "--sumstats-prefix=${SUMSTATS_PREFIX}" "--dataset-config=${DATASET_CONFIG}"
+bash "$SCRIPT_DIR/02_make_loci_report.sh" "$PHENO" "--sumstats-file=${SUMSTATS_FILE}"
+bash "$SCRIPT_DIR/03_make_chunk_lookup.sh" "$PHENO" "$REF_COHORT" "--dataset-config=${DATASET_CONFIG}"
 
 if [ ! -s "$LOCI_FILE" ]; then
   echo "ERROR: $LOCI_FILE missing/empty after 03_make_chunk_lookup.sh -- nothing to submit for stage 5" >&2

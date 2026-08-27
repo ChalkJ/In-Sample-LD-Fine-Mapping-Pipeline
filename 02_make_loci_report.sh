@@ -3,26 +3,28 @@ set -euo pipefail
 
 FINEMAP_ROOT="${FINEMAP_ROOT:?FINEMAP_ROOT must be set -- e.g. export FINEMAP_ROOT=/path/to/your/finemapping}"
 
-SUMSTATS_PREFIX=""
+SUMSTATS_FILE=""
 POSITIONAL=()
 for arg in "$@"; do
   case "$arg" in
-    --sumstats-prefix=*) SUMSTATS_PREFIX="${arg#--sumstats-prefix=}" ;;
+    --sumstats-file=*) SUMSTATS_FILE="${arg#--sumstats-file=}" ;;
     *) POSITIONAL+=("$arg") ;;
   esac
 done
 set -- "${POSITIONAL[@]}"
 
-PHENO=${1:?"usage: 02_make_loci_report.sh <phenotype> --sumstats-prefix=<prefix>"}
-SUMSTATS_PREFIX="${SUMSTATS_PREFIX:?--sumstats-prefix=<prefix> is required -- the per-chromosome sumstats filename prefix}"
+PHENO=${1:?"usage: 02_make_loci_report.sh <phenotype> --sumstats-file=<filename>"}
+SUMSTATS_FILE="${SUMSTATS_FILE:?--sumstats-file=<filename> is required -- your whole-genome sumstats file}"
 
 BASE=$FINEMAP_ROOT/$PHENO
-REPORT=$BASE/clump/${SUMSTATS_PREFIX}_loci_report.txt
+SUMSTATS=$BASE/$SUMSTATS_FILE
+# Fixed name, not prefix-based -- there's only ever one loci report per
+# phenotype directory, nothing left to disambiguate.
+REPORT=$BASE/clump/loci_report.txt
 
 echo -e "CHR\tSNP\tP\tSTART\tSTOP" > "$REPORT"
 
 for CHR in $(seq 1 22); do
-  SUMSTATS=$BASE/${SUMSTATS_PREFIX}_chr${CHR}.txt
   CLUMP=$BASE/clump/chr${CHR}.clumps
 
   if [ ! -f "$CLUMP" ]; then

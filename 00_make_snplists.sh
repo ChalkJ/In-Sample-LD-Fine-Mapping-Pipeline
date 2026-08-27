@@ -8,42 +8,39 @@
 
 set -euo pipefail
 
-# Extracts the SNP column from each of a phenotype's 22 per-chromosome
-# sumstats files, for use as a plink --extract list in stage 01. Lightweight
-# awk pass over 22 files -- the small default resource request above is
-# intentional, not a placeholder to size up.
+# Extracts the SNP column from the phenotype's whole-genome sumstats file,
+# for use as a plink --extract list in stage 01. A single, genome-wide list
+# is sufficient -- 01_extract_merge_clump.sh already restricts genotype data
+# with --chr per array task before applying --extract, so this list never
+# needed to be split by chromosome.
 #
-# Usage: 00_make_snplists.sh <phenotype> --sumstats-prefix=<prefix>
-#   <prefix> is whatever your per-chromosome sumstats files are named:
-#   expects "$FINEMAP_ROOT/<phenotype>/<prefix>_chr<N>.txt" for N = 1..22.
+# Usage: 00_make_snplists.sh <phenotype> --sumstats-file=<filename>
+#   <filename> is your whole-genome sumstats file, expected directly under
+#   "$FINEMAP_ROOT/<phenotype>/".
 
 FINEMAP_ROOT="${FINEMAP_ROOT:?FINEMAP_ROOT must be set -- e.g. export FINEMAP_ROOT=/path/to/your/finemapping}"
 
-SUMSTATS_PREFIX=""
+SUMSTATS_FILE=""
 POSITIONAL=()
 for arg in "$@"; do
   case "$arg" in
-    --sumstats-prefix=*) SUMSTATS_PREFIX="${arg#--sumstats-prefix=}" ;;
+    --sumstats-file=*) SUMSTATS_FILE="${arg#--sumstats-file=}" ;;
     *) POSITIONAL+=("$arg") ;;
   esac
 done
 set -- "${POSITIONAL[@]}"
 
-PHENO=${1:?"usage: 00_make_snplists.sh <phenotype> --sumstats-prefix=<prefix>"}
-SUMSTATS_PREFIX="${SUMSTATS_PREFIX:?--sumstats-prefix=<prefix> is required -- the per-chromosome sumstats filename prefix}"
+PHENO=${1:?"usage: 00_make_snplists.sh <phenotype> --sumstats-file=<filename>"}
+SUMSTATS_FILE="${SUMSTATS_FILE:?--sumstats-file=<filename> is required -- your whole-genome sumstats file}"
 
 BASE=$FINEMAP_ROOT/$PHENO
-mkdir -p "$BASE/snplists"
+SUMSTATS="$BASE/$SUMSTATS_FILE"
+SNPLIST="$BASE/snplist.txt"
 
-for CHR in $(seq 1 22); do
-  SUMSTATS="$BASE/${SUMSTATS_PREFIX}_chr${CHR}.txt"
-  SNPLIST="$BASE/snplists/${SUMSTATS_PREFIX}_chr${CHR}.snplist"
+if [ ! -f "$SUMSTATS" ]; then
+  echo "ERROR: $SUMSTATS not found" >&2
+  exit 1
+fi
 
-  if [ ! -f "$SUMSTATS" ]; then
-    echo "MISSING: $SUMSTATS" >&2
-    continue
-  fi
-
-  awk -F'\t' 'NR>1{print $2}' "$SUMSTATS" > "$SNPLIST"
-  echo "$PHENO chr$CHR: $(wc -l < "$SNPLIST") SNPs -> $SNPLIST"
-done
+awk -F'\t' 'NR>1{print $2}' "$SUMSTATS" > "$SNPLIST"
+echo "$PHENO: $(wc -l < "$SNPLIST") SNPs -> $SNPLIST"

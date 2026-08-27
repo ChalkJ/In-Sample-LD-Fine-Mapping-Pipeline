@@ -26,7 +26,7 @@ See "Configuration" and "Dataset config" below.
 
 ```bash
 export FINEMAP_ROOT=/path/to/your/finemapping   # see "Configuration" below
-bash submit_full_pipeline.sh my_pheno --sumstats-prefix=my_pheno_gwas
+bash submit_full_pipeline.sh my_pheno --sumstats-file=my_pheno_gwas.txt
 ```
 
 That's the whole thing. It queues every stage below as SLURM jobs chained
@@ -38,20 +38,21 @@ squeue -u $USER
 ```
 
 `<phenotype>` (`my_pheno` above) can be anything you like, it's just the
-subdirectory name under `$FINEMAP_ROOT`. `--sumstats-prefix` is required:
-it's whatever your own per-chromosome sumstats files are named (see
-"Prerequisites" below). There is no fixed list of accepted phenotype names —
-any identifier works, nothing in the pipeline needs editing to add a new one.
+subdirectory name under `$FINEMAP_ROOT`. `--sumstats-file` is required:
+it's whatever your own **whole-genome** sumstats file is named — one file,
+not split by chromosome (see "Prerequisites" below). There is no fixed list
+of accepted phenotype names — any identifier works, nothing in the pipeline
+needs editing to add a new one.
 
 Optional flags (all can be combined):
 
 ```bash
-bash submit_full_pipeline.sh my_pheno --sumstats-prefix=my_pheno_gwas --dedup=off
-bash submit_full_pipeline.sh my_pheno --sumstats-prefix=my_pheno_gwas --hetpva-cutoff=0.01
-bash submit_full_pipeline.sh my_pheno --sumstats-prefix=my_pheno_gwas --hetpva-cutoff=off --dedup=off
-bash submit_full_pipeline.sh my_pheno --sumstats-prefix=my_pheno_gwas --ref-cohort=grp10neu3
-bash submit_full_pipeline.sh my_pheno --sumstats-prefix=my_pheno_gwas --dataset-config=datasets/my_other_dataset.sh
-bash submit_full_pipeline.sh my_pheno --sumstats-prefix=my_pheno_gwas --finemap-config=finemap_config_susie_only.R
+bash submit_full_pipeline.sh my_pheno --sumstats-file=my_pheno_gwas.txt --dedup=off
+bash submit_full_pipeline.sh my_pheno --sumstats-file=my_pheno_gwas.txt --hetpva-cutoff=0.01
+bash submit_full_pipeline.sh my_pheno --sumstats-file=my_pheno_gwas.txt --hetpva-cutoff=off --dedup=off
+bash submit_full_pipeline.sh my_pheno --sumstats-file=my_pheno_gwas.txt --ref-cohort=grp10neu3
+bash submit_full_pipeline.sh my_pheno --sumstats-file=my_pheno_gwas.txt --dataset-config=datasets/my_other_dataset.sh
+bash submit_full_pipeline.sh my_pheno --sumstats-file=my_pheno_gwas.txt --finemap-config=finemap_config_susie_only.R
 ```
 
 ## Configuration
@@ -81,10 +82,19 @@ use) and **`--finemap-config=<path>`** (fine-mapping method/parameters).
 Before running, for the phenotype you're processing (`$PHENO`), under
 `$FINEMAP_ROOT/$PHENO/`:
 
-- 22 per-chromosome sumstats files, one per autosome, named
-  `<prefix>_chr<N>.txt` where `<prefix>` is whatever you pass as
-  `--sumstats-prefix=<prefix>` entirely up to you, however your own
-  upstream GWAS pipeline happened to name its per-chromosome output.
+- **One whole-genome sumstats file** (all autosomes together, any row
+  order — nothing in the pipeline assumes CHR/BP-sorted input), named
+  whatever you like and passed via `--sumstats-file=<filename>`. Not split
+  by chromosome — see "Input format" below for the required column layout.
+
+  **If you already have per-chromosome files** (e.g. from an older version
+  of this pipeline, or any tool that splits output by chromosome), concatenate
+  them first — but a naive `cat chr*.txt > combined.txt` embeds a duplicate
+  header row from every file after the first, which will corrupt parsing.
+  Keep only the first file's header:
+  ```bash
+  (head -1 chr1.txt; tail -n +2 -q chr*.txt) > combined.txt
+  ```
 - `EUR_cohorts.txt` — one cohort name per line, e.g.:
   ```
   grp10neu3
@@ -104,7 +114,7 @@ dataset-config-driven, since these are software installs, not data):
 
 ## Input format
 
-Each per-chromosome sumstats file is expected to be in DANER format ie:
+The whole-genome sumstats file is expected to be in DANER format, tab-separated:
 
 ```
 CHR  SNP  BP  A1  A2  FRQ_A_x  FRQ_U_x  INFO  OR  SE  P  ngt  Direction  HetISqt  HetDf  HetPVa  Nca  Nco  Neff_half
@@ -123,11 +133,11 @@ reverse-engineer from the script.
 
 | # | Script | What it does | Skip-if-done check |
 |---|---|---|---|
-| QC | `qc_filter_sumstats.sh` → `qc_filter_sumstats.R` | Dedups per-chromosome sumstats (default: keep lowest P per CHR:BP) and filters HetPVa (default: drop < 0.05; NA/non-numeric always kept), then combines all 22 chromosomes into one gzipped daner-format file. Both filters are optional/tunable — `--dedup=off`, `--hetpva-cutoff=<value>\|off`. Writes a plain-text QC report alongside (row counts in/out per chromosome, per filter) so filtering is auditable, not a black box. | Skips entirely if the combined output `.gz` already exists and is non-empty. Delete it to force a rerun (e.g. after changing the filter settings). |
-| 00 | `00_make_snplists.sh` | Extracts the SNP column from each per-chromosome sumstats file, for use as a plink `--extract` list in stage 01. | None — always regenerates (cheap, deterministic). |
-| 01 | `01_extract_merge_clump.sh` | SLURM array (chromosomes 1–22). Per cohort: plink2 extract of that chromosome's GWAS SNPs from the cohort's best-guess genotypes; then plink1.9 `--merge-list` across cohorts (not plink2 `--pmerge-list` — plink2 doesn't support merging different cohorts' samples over the same SNP set); then plink2 `--clump` (p1=5e-8, p2=1e-4, r2=0.1, kb=3000). | Per-chromosome: skips if `clump/chr<N>.clumps` exists and is non-empty. Delete that file to force a rerun of that one chromosome. |
-| 02 | `02_make_loci_report.sh` | Concatenates the 22 chromosomes' clump output into one `CHR SNP P START STOP` report, deriving each locus's boundaries from the min/max BP across the index SNP and all its secondary-clumped (`SP2`) SNPs. | None — always regenerates from the existing per-chromosome clump files (cheap). A missing `.clumps` file for a chromosome is treated as "0 genome-wide-significant loci there" (confirmed via that chromosome's `.log`), not an error. |
-| 03 | `03_make_chunk_lookup.sh` | Derives the dosage-chunk boundary table from one reference cohort's actual files on disk (via the dataset config, not hardcoded), then writes `loci_input.txt` (plain locus numbers, unpadded — see "Known gotchas") and `chunk_lookup.txt` (zero-padded locus numbers, one or two chunk IDs). | Skips entirely if **both** `loci_input.txt` and `chunk_lookup.txt` already exist and are non-empty — deliberately, since these files are hand-edited afterward (MHC exclusion, chunk-boundary fixes) and regenerating them unconditionally would silently overwrite those edits and renumber every locus after the first dropped one. Delete both files to force a rerun. |
+| QC | `qc_filter_sumstats.sh` → `qc_filter_sumstats.R` | Dedups the whole-genome sumstats (default: keep lowest P per CHR:BP) and filters HetPVa (default: drop < 0.05; NA/non-numeric always kept), then writes one gzipped daner-format file. Both filters are optional/tunable — `--dedup=off`, `--hetpva-cutoff=<value>\|off`. Writes a plain-text QC report alongside (row counts in/out per chromosome, per filter) so filtering is auditable, not a black box. | Skips entirely if the combined output `.gz` already exists and is non-empty. Delete it to force a rerun (e.g. after changing the filter settings). |
+| 00 | `00_make_snplists.sh` | Extracts the SNP column from the whole-genome sumstats file into one `snplist.txt`, for use as a plink `--extract` list in stage 01 (a single genome-wide list is sufficient — stage 01 already restricts genotype data to one chromosome per array task with `--chr` before applying `--extract`). | None — always regenerates (cheap, deterministic). |
+| 01 | `01_extract_merge_clump.sh` | SLURM array (chromosomes 1–22). Per cohort: plink2 extract of that chromosome's GWAS SNPs from the cohort's best-guess genotypes; then plink1.9 `--merge-list` across cohorts (not plink2 `--pmerge-list` — plink2 doesn't support merging different cohorts' samples over the same SNP set); then plink2 `--clump` against the whole-genome sumstats (p1=5e-8, p2=1e-4, r2=0.1, kb=3000) — plink2 matches SNPs by ID against whatever genotype data is loaded, so the already-chromosome-restricted genotype data is enough to keep this correct without needing per-chromosome sumstats. | Per-chromosome: skips if `clump/chr<N>.clumps` exists and is non-empty. Delete that file to force a rerun of that one chromosome. |
+| 02 | `02_make_loci_report.sh` | Concatenates the 22 chromosomes' clump output into one `CHR SNP P START STOP` report (`clump/loci_report.txt`), deriving each locus's boundaries from the min/max BP across the index SNP and all its secondary-clumped (`SP2`) SNPs. | None — always regenerates from the existing per-chromosome clump files (cheap). A missing `.clumps` file for a chromosome is treated as "0 genome-wide-significant loci there" (confirmed via that chromosome's `.log`), not an error. |
+| 03 | `03_make_chunk_lookup.sh` | Derives the dosage-chunk boundary table from one reference cohort's actual files on disk (via the dataset config, not hardcoded), then writes `loci_input.txt` (plain locus numbers, unpadded — see "Known gotchas") and `chunk_lookup.txt` (zero-padded locus numbers, one or two chunk IDs). Doesn't touch sumstats at all — just reads `02`'s report. | Skips entirely if **both** `loci_input.txt` and `chunk_lookup.txt` already exist and are non-empty — deliberately, since these files are hand-edited afterward (MHC exclusion, chunk-boundary fixes) and regenerating them unconditionally would silently overwrite those edits and renumber every locus after the first dropped one. Delete both files to force a rerun. |
 | 04 | `04_finalize_loci_and_launch_ld.sh` | Runs 02 then 03, counts the resulting loci, then self-submits `run_ld_pipeline.sh` as a `--array=1-N` job sized to that exact count — the step that used to mean watching `squeue`, counting loci by hand, and submitting stage 5 yourself. | None itself (cheap to rerun — 02/03 regenerate deterministically and 05's own per-locus skip check makes a duplicate array submission harmless, just wasteful). |
 | LD | `run_ld_pipeline.sh` + `make_dataset_ld.sh` + `LDmerge_v2.R` | SLURM array, one task per locus. Imports the relevant dosage chunk(s), extracts that locus's GWAS SNPs with consistent allele orientation, computes per-cohort pairwise LD (plink1.9 `--r`), then merges across cohorts with N-effective weighting (R). | Per-locus: skips if `output/ld/<locus>.ld.gz` already exists. Delete that file to force a rerun of that one locus. |
 | 05 | `05_run_finemapping.sh` → `run_finemapping.R` | Single SLURM job (not an array — see "Fine-mapping" below for why), self-submitted by 04 once the LD array completes. Config-driven SuSiE / FINEMAP / both / none (`finemap_config.R`), with an adaptive re-run pass for loci that saturate the initial `max_causal_variants`. | Per-locus, per enabled method: skips a locus if its SuSiE `.rds` / FINEMAP `.snp` output already exists (whichever method(s) are enabled). `method="none"` skips the whole stage immediately. |
@@ -140,9 +150,9 @@ Under `$FINEMAP_ROOT/$PHENO/`:
 ```
 qc_sumstats_report.txt                       # QC stage: what was dropped and why
 daner_<phenotype>_qc.gz                      # QC stage: combined, filtered sumstats (fixed naming convention)
-snplists/<prefix>_chr<N>.snplist             # stage 00
+snplist.txt                                  # stage 00
 clump/chr<N>.clumps, chr<N>.log              # stage 01
-clump/<prefix>_loci_report.txt               # stage 02
+clump/loci_report.txt                        # stage 02
 loci_input.txt                               # stage 03: locus_id  chr  start  stop  (unpadded, no header)
 chunk_lookup.txt                             # stage 03: locus_id(padded)  chunk1  chunk2-or-NA
 output/ld/<locus>.ld.gz                      # LD stage: merged LD matrix (gzipped)
@@ -315,15 +325,23 @@ scatter plots; the LD heatmap only needs base R.
   pipeline — established practice has been to manually force such loci into
   genuine two-chunk loci (add the adjacent chunk instead of `NA` in
   `chunk_lookup.txt`) after stage 03. Same skip-if-done protection as above.
-- **`fread` silently drops malformed/truncated sumstats rows** — found for
-  real during validation: `sczvscon`'s `sc_vs_allcontrols_chr5.txt` has one
-  line (SNP `rs163017`) truncated after the `Direction` field, missing
-  `HetISqt` onward. `data.table::fread` treats a short trailing line like
-  this as a "footer" and drops it with only an R warning — easy to miss in
-  a SLURM `.err` log. `qc_filter_sumstats.R` now cross-checks each
-  chromosome's raw line count against what `fread` actually returned and
-  writes an explicit `WARNING:` line in the QC report if they differ, so
-  this shows up somewhere you'll actually see it.
+- **`fread` on a ragged/truncated row *mid-file* can silently drop the rest
+  of the file, not just that one row** — found for real during validation:
+  `sczvscon`'s sumstats have one line (SNP `rs163017`) truncated after the
+  `Direction` field, missing `HetISqt` onward. With the old per-chromosome
+  input, that line happened to sit near the end of a small single-chromosome
+  file, so `fread` merely treated it as a "footer" and dropped the one row
+  with an R warning. Once the pipeline moved to a single whole-genome
+  sumstats file, the same malformed row sat *mid-file* — and without
+  `fill=TRUE`, `data.table::fread` doesn't just drop that row, it stops
+  parsing entirely at that point: a real 7,178,058-row test file came back
+  as only 2,655,150 rows, a 63% silent data loss, with no error at all.
+  `qc_filter_sumstats.R` now calls `fread(..., fill = TRUE)`, which pads the
+  short row's missing trailing columns with NA instead of aborting, and
+  separately flags any row left with NA in the sumstats' last column as a
+  likely truncated/ragged line (reported by SNP name in the QC report) —
+  since after `fill=TRUE` the old raw-line-count-vs-fread-count check no
+  longer fires for this case (the row is retained, just padded).
 - **A missing `.clumps` file after stage 01 is not necessarily a failure** —
   plink2 doesn't write one at all when zero variants pass `--clump-p1`
   (prints "No significant --clump results" instead of a header-only file).
